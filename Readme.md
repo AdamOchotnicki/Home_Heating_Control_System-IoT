@@ -9,10 +9,10 @@ Group E1 - Internet of Things.
     The program is switched on and off by pressing the button.
     The green LED indicates when the program is working.
     The temperature sensor reads the ambient temperature, which is converted to degrees Celsius.
-    If the ambient temperature exceeds the level specified in "turningTemperature",
+    If the ambient temperature exceeds the level specified in "threshold",
     the red LED imitating the heating switch is switched off.
     The red LED (heating switch) will be turned on again when the temperature
-    drops below the level given in "turningTemperature".
+    drops below the level given in "threshold".
 
     It is possible to communicate with and control the program / device in the LAN via WiFi.
     Commands:
@@ -22,8 +22,8 @@ Group E1 - Internet of Things.
 
     "/arduino/temp/0"        -> shows the current temperature
     
-    "/arduino/settemp/0"     -> shows the current value of "turningTemperature"
-    "/arduino/settemp/0/25"  -> assigns a value of 25 to the variable "turningTemperature"
+    "/arduino/settemp/0"     -> shows the current value of "threshold"
+    "/arduino/settemp/0/25"  -> assigns a value of 25 to the variable "threshold"
     
     Examples of other possible commands:
     "/arduino/digital/13"     -> digitalRead(13)

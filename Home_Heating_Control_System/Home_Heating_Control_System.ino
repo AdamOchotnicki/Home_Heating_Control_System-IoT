@@ -8,10 +8,10 @@
     The program is switched on and off by pressing the button.
     The green LED indicates when the program is working.
     The temperature sensor reads the ambient temperature, which is converted to degrees Celsius.
-    If the ambient temperature exceeds the level specified in "turningTemperature",
+    If the ambient temperature exceeds the level specified in "threshold",
     the red LED imitating the heating switch is switched off.
     The red LED (heating switch) will be turned on again when the temperature
-    drops below the level given in "turningTemperature".
+    drops below the level given in "threshold".
 
     It is possible to communicate with and control the program / device in the LAN via WiFi.
     Commands:
@@ -21,8 +21,8 @@
 
     "/arduino/temp/0"        -> shows the current temperature
     
-    "/arduino/settemp/0"     -> shows the current value of "turningTemperature"
-    "/arduino/settemp/0/25"  -> assigns a value of 25 to the variable "turningTemperature"
+    "/arduino/settemp/0"     -> shows the current value of "threshold"
+    "/arduino/settemp/0/25"  -> assigns a value of 25 to the variable "threshold"
     
     Examples of other possible commands:
     "/arduino/digital/13"     -> digitalRead(13)
@@ -40,7 +40,7 @@ const int HEATING_LED_PIN = 4;      // heating LED (red) connected to D4
 
 const int B=4275;            // B value of the thermistor
 
-int turningTemperature = 27; // setting temperature when the LED should turn off
+int threshold = 27;          // setting temperature when the LED should turn off
 int buttonState = 0;         // variable for button state it is off by default
 int programRun = 0;          // variable for program loop it is off by default
 int sensorValue;             // variable to store the value coming from the sensor
@@ -128,7 +128,7 @@ void loop()
     delay(1000);        // delay in between reads for stability
 
     // the decision to turn the heating on / off
-    if (temperature < turningTemperature) 
+    if (temperature < threshold) 
     digitalWrite(HEATING_LED_PIN, HIGH);   // turn the LED on (HIGH is the voltage level)
     else
     digitalWrite(HEATING_LED_PIN, LOW); // turn the LED off
@@ -254,17 +254,17 @@ void setTemperature(BridgeClient client)
   if (client.read() == '/')
   {
     // reading of the new temperature value
-    turningTemperature = client.parseInt();
+    threshold = client.parseInt();
 
     // Send feedback to client
-    client.print(F("Turning Temperature set to : "));
-    client.print(turningTemperature);
+    client.print(F("Threshold set to : "));
+    client.print(threshold);
   }
   else
   {
     // Send feedback to client
-    client.print(F("Turning Temperature is currently : "));
-    client.print(turningTemperature);
+    client.print(F("Threshold value currently is : "));
+    client.print(threshold);
   }
 }
 
