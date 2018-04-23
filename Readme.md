@@ -13,6 +13,7 @@ Group E1 - Internet of Things.
     the red LED imitating the heating switch is switched off.
     The red LED (heating switch) will be turned on again when the temperature
     drops below the level given in "threshold".
+    The program also includes a clock.
 
     It is possible to communicate with and control the program / device in the LAN via WiFi.
     Commands:
@@ -24,11 +25,5 @@ Group E1 - Internet of Things.
     
     "/arduino/settemp/0"     -> shows the current value of "threshold"
     "/arduino/settemp/0/25"  -> assigns a value of 25 to the variable "threshold"
-    
-    Examples of other possible commands:
-    "/arduino/digital/13"     -> digitalRead(13)
-    "/arduino/digital/13/1"   -> digitalWrite(13, HIGH)
-    "/arduino/analog/2/123"   -> analogWrite(2, 123)
-    "/arduino/analog/2"       -> analogRead(2)
-    "/arduino/mode/13/input"  -> pinMode(13, INPUT)
-    "/arduino/mode/13/output" -> pinMode(13, OUTPUT)
+
+    "/arduino/showtime/0"    -> shows the current time on the device

@@ -12,6 +12,7 @@
     the red LED imitating the heating switch is switched off.
     The red LED (heating switch) will be turned on again when the temperature
     drops below the level given in "threshold".
+    The program also includes a clock.
 
     It is possible to communicate with and control the program / device in the LAN via WiFi.
     Commands:
@@ -23,8 +24,10 @@
     
     "/arduino/settemp/0"     -> shows the current value of "threshold"
     "/arduino/settemp/0/25"  -> assigns a value of 25 to the variable "threshold"
+
+    "/arduino/showtime/0"    -> shows the current time on the device
     
-    Examples of other possible commands:
+    "Examples of other possible commands:" - THESE COMMANDS ARE NOT ACTIVE, THE PROJECT DOES NOT PROVIDE THEIR USE!
     "/arduino/digital/13"     -> digitalRead(13)
     "/arduino/digital/13/1"   -> digitalWrite(13, HIGH)
     "/arduino/analog/2/123"   -> analogWrite(2, 123)
@@ -37,6 +40,7 @@ const int SENSOR_PIN = A2;          // grove - temperature sensor connect to A2
 const int BUTTON_PIN = 2;           // button connected to D2
 const int PROGRAM_ON_LED_PIN = 3;   // program ON LED (green) connected to D3
 const int HEATING_LED_PIN = 4;      // heating LED (red) connected to D4
+const int SET_TIME_REMINDER = 3;    // after 3 minutes from boot a reminder should be sent to set the time
 
 const int B=4275;            // B value of the thermistor
 
@@ -46,6 +50,12 @@ int programRun = 0;          // variable for program loop it is off by default
 int sensorValue;             // variable to store the value coming from the sensor
 float temperature;           // variable for temperature value
 float R;                     // another variable for temperature calculation
+long runningTime = 0;        // variable for running time (seconds)
+long temporaryTime = 0;      // variable to observe the change in time
+int seconds = 0;             // seconds variable
+int minutes = 0;             // minutes variable
+int hours = 0;               // hours variable
+int setTimeCounter = 0;      // we can see if the time has been set
 
 #include <Bridge.h>
 #include <BridgeServer.h>
@@ -79,6 +89,43 @@ void setup()
 // the loop routine runs over and over again forever:
 void loop()
 {
+  // start counting the time
+  runningTime = (millis() / 1000);
+  
+  // CLOCK
+  // Comparing whether there has been a change in time.
+  if (temporaryTime != runningTime)
+  {
+    temporaryTime = runningTime;
+    seconds++;  // add second
+
+    if (seconds == 60)
+    {
+      seconds = 0;  // reset seconds
+      minutes++;  // add minute
+
+      if (minutes == 60)
+      {
+        minutes = 0;  //reset minutes
+        hours++;  // add hour
+
+        if (hours == 24)
+        {
+          hours = 0;  // reset hours
+        }
+      }
+    }
+  }
+
+  // reminder to set the time
+  if (setTimeCounter == 0)
+  {
+    if (minutes == SET_TIME_REMINDER)
+    {
+      // use pushingbox to send an email with a reminder
+    }
+  }
+
   // Get clients coming from server
   BridgeClient client = server.accept();
 
@@ -164,7 +211,19 @@ void process(BridgeClient client)
     setTemperature(client);
   }
 
-  // is "digital" command?
+  // is "sv" command?
+  if (command == "sv")
+  {
+    showVariables(client);
+  }
+
+  // is "showtime" command?
+  if (command == "showtime")
+  {
+    showTime(client);
+  }
+
+  /*// is "digital" command?
   if (command == "digital")
   {
     digitalCommand(client);
@@ -180,7 +239,36 @@ void process(BridgeClient client)
   if (command == "mode")
   {
     modeCommand(client);
-  }
+  }*/
+}
+
+void showTime(BridgeClient client)
+{
+  client.print(F("Time "));
+  client.print(hours);
+  client.print(F(" : "));
+  client.print(minutes);
+  client.print(F(" : "));
+  client.println(seconds);
+}
+
+void showVariables(BridgeClient client)
+{
+    client.print(F("threshold : "));
+    client.println(threshold);
+    client.print(F("programRun : "));
+    client.println(programRun);
+    client.print(F("temperature : "));
+    client.println(temperature);
+    client.print(F("seconds : "));
+    client.println(seconds);
+    client.print(F("minutes : "));
+    client.println(minutes);
+    client.print(F("hours : "));
+    client.println(hours);
+    client.print(F("setTimeCounter : "));
+    client.println(setTimeCounter);
+    
 }
 
 void checkTemperature(BridgeClient client)
@@ -215,14 +303,14 @@ void onOff(BridgeClient client)
     if (programRun == 1)
     {
     // Send feedback to client
-    client.print(F("Turning on the program. "));
-    client.print(F("Program is now ON."));
+    client.println(F("Turning on the program. "));
+    client.println(F("Program is now ON."));
     }
     else
     {
     // Send feedback to client
-    client.print(F("Turning off the program. "));
-    client.print(F("Program is now OFF."));
+    client.println(F("Turning off the program. "));
+    client.println(F("Program is now OFF."));
     }
   }
   else
@@ -263,12 +351,12 @@ void setTemperature(BridgeClient client)
   else
   {
     // Send feedback to client
-    client.print(F("Threshold value currently is : "));
+    client.print(F("Threshold value is currently : "));
     client.print(threshold);
   }
 }
 
-void digitalCommand(BridgeClient client)
+/*void digitalCommand(BridgeClient client)
 {
   int pin, value;
 
@@ -381,4 +469,4 @@ void modeCommand(BridgeClient client)
 
   client.print(F("error: invalid mode "));
   client.print(mode);
-}
+}*/
