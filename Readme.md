@@ -35,7 +35,7 @@ The program also includes a clock.
     
 The program includes the "forcedon" function.
     It can be turned on / off via a LAN browser or by using the button mentioned above.
-    It allows you to permanently turn on / off the heating without temperature control.
+    It allows user to permanently turn on / off the heating without temperature control.
     WARNING!
     The heating must be turned off by the user.
     Also disables temperature control heating: clock control, boost or constant if they are on.
@@ -43,9 +43,9 @@ The program includes the "forcedon" function.
 
     Commands to communicate with and control the program / device in the LAN via WiFi :
     
-    "/arduino/onoff/0"       -> shows if the program is running
-    "/arduino/onoff/0/1"     -> turning ON the program
-    "/arduino/onoff/0/0"     -> turning OFF the program
+    "/arduino/forcedon/0"    -> shows if the Forced Heating program is running
+    "/arduino/forcedon/0/1"  -> turning ON the Forced Heating program
+    "/arduino/forcedon/0/0"  -> turning OFF the Forced Heating program
 
     "/arduino/temp/0"        -> shows the current temperature
     

@@ -33,15 +33,15 @@
 
     The program includes the "forcedon" function.
     It can be turned on / off via a LAN browser or by using the button mentioned above.
-    It allows you to permanently turn on / off the heating without temperature control.
+    It allows user to permanently turn on / off the heating without temperature control.
     WARNING!
     The heating must be turned off by the user.
     Also disables temperature control heating: clock control, boost or constant if they are on.
 
     Commands to communicate with and control the program / device in the LAN via WiFi :
-    "/arduino/onoff/0"       -> shows if the program is running
-    "/arduino/onoff/0/1"     -> turning ON the program
-    "/arduino/onoff/0/0"     -> turning OFF the program
+    "/arduino/forcedon/0"    -> shows if the Forced Heating program is running
+    "/arduino/forcedon/0/1"  -> turning ON the Forced Heating program
+    "/arduino/forcedon/0/0"  -> turning OFF the Forced Heating program
 
     "/arduino/temp/0"        -> shows the current temperature
     
@@ -69,16 +69,21 @@ const int B=4275;            // B value of the thermistor
 
 int threshold = 27;          // setting temperature when the LED should turn off
 int buttonState = 0;         // variable for button state it is off by default
-int programRun = 0;          // variable for program loop it is off by default
+int temperatureControl = 0;  // variable for temperature control loop it is off by default
 int sensorValue;             // variable to store the value coming from the sensor
 float temperature;           // variable for temperature value
 float R;                     // another variable for temperature calculation
 long runningTime = 0;        // variable for running time (seconds)
-long temporaryTime = 0;      // variable to observe the change in time
+long runningTimeChange = 0;  // variable to observe the change in time
 int seconds = 0;             // seconds variable
 int minutes = 0;             // minutes variable
 int hours = 0;               // hours variable
 int setTimeCounter = 0;      // we can see if the time has been set
+int forcedOn = 0;            // variable for forced on loop it is off by default
+int forcedOnChange = 0;      // variable to observe the change in "forcedOn"
+int constant = 0;            // variable for constant it is off by default
+int boost = 0;               // variable for boost it is off by default
+int clockControl = 0;        // variable for clock control it is off by default
 
 #include <Bridge.h>
 #include <BridgeServer.h>
@@ -117,9 +122,9 @@ void loop()
   
   // CLOCK
   // Comparing whether there has been a change in time.
-  if (temporaryTime != runningTime)
+  if (runningTimeChange != runningTime)
   {
-    temporaryTime = runningTime;
+    runningTimeChange = runningTime;
     seconds++;  // add second
 
     if (seconds == 60)
@@ -170,17 +175,17 @@ void loop()
   // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
   if (buttonState == HIGH)
   {
-     if(programRun == 0)
+     if(forcedOn == 0)
      {
-         programRun = 1;
+         forcedOn = 1;
      }
      else
      {
-         programRun = 0;
+         forcedOn = 0;
      }
   }
 
-  if (programRun != 0)
+  if (temperatureControl == 1)
   {
     // turn the program LED on (HIGH is the voltage level)
     digitalWrite(PROGRAM_ON_LED_PIN, HIGH);
@@ -205,9 +210,34 @@ void loop()
   }
   else
   {
-    // turning off everything
+    // turning off temerature control and heating
     digitalWrite(PROGRAM_ON_LED_PIN, LOW); // turn the LED off
-    digitalWrite(HEATING_LED_PIN, LOW); // turn the LED off
+    
+    if (forcedOn != 1)
+    {
+      digitalWrite(HEATING_LED_PIN, LOW); // turn the LED off
+    }
+  }
+
+  if (forcedOnChange != forcedOn)
+  {
+    forcedOnChange = forcedOn;
+
+    if (forcedOn == 1)
+    {
+      // turn other features off
+      constant = 0;
+      boost = 0;
+      clockControl = 0;
+
+      // turn the heating on
+      digitalWrite(HEATING_LED_PIN, HIGH);
+    }
+    else
+    {
+      // turn the heating off
+      digitalWrite(HEATING_LED_PIN, LOW);
+    }
   }
 }
 
@@ -222,10 +252,10 @@ void process(BridgeClient client)
     checkTemperature(client);
   }
 
-  // is "onoff" command?
-  if (command == "onoff")
+  // is "forcedon" command?
+  if (command == "forcedon")
   {
-    onOff(client);
+    forcedOnOff(client);
   }
 
     // is "settemp" command?
@@ -284,8 +314,8 @@ void showVariables(BridgeClient client)
 {
     client.print(F("threshold : "));
     client.println(threshold);
-    client.print(F("programRun : "));
-    client.println(programRun);
+    client.print(F("temperatureControl : "));
+    client.println(temperatureControl);
     client.print(F("temperature : "));
     client.println(temperature);
     client.print(F("seconds : "));
@@ -302,10 +332,10 @@ void showVariables(BridgeClient client)
 void checkTemperature(BridgeClient client)
 {
     // Send feedback to client
-    if (programRun == 0)
+    if (temperatureControl == 0)
     {
       showTime(client);
-      client.print(F("Program is currently OFF."));
+      client.print(F("Temperature control is currently OFF."));
     }
     else
     {
@@ -315,7 +345,7 @@ void checkTemperature(BridgeClient client)
     }
 }
 
-void onOff(BridgeClient client)
+void forcedOnOff(BridgeClient client)
 {
   // fictitious number of pin
   int pin;
@@ -324,37 +354,41 @@ void onOff(BridgeClient client)
   pin = client.parseInt();
   
   // If the next character is a '/' it means we have an URL
-  // with a value: "/onoff/0/1" or "/onoff/0/0"
+  // with a value: "/forcedon/0/1" or "/forcedon/0/0"
   if (client.read() == '/')
   {
-    // reading of the new temperature value
-    programRun = client.parseInt();
+    // reading a new value
+    forcedOn = client.parseInt();
 
-    if (programRun == 1)
+    if (forcedOn == 1)
     {
     // Send feedback to client
-    client.println(F("Turning on the program. "));
-    client.println(F("Program is now ON."));
+    client.println(F("WARNING!"));
+    client.println(F("Turning on the Forced Heating program."));
+    client.println(F("Heating is now ON."));
+    client.println(F("DO NOT FORGET TO TURN OFF THE HEATING!"));
     }
     else
     {
     // Send feedback to client
-    client.println(F("Turning off the program. "));
-    client.println(F("Program is now OFF."));
+    client.println(F("Turning off the Forced Heating program."));
+    client.println(F("Heating is now OFF."));
     }
   }
   else
   {
     // checking if the program is running
-    if (programRun == 1)
+    if (forcedOn == 1)
     {
     // Send feedback to client
-    client.print(F("Program is ON."));
+    client.println(F("WARNING!"));
+    client.println(F("Forced Heating is ON."));
+    client.println(F("DO NOT FORGET TO TURN OFF THE HEATING!"));
     }
     else
     {
     // Send feedback to client
-    client.print(F("Program is OFF."));
+    client.println(F("Forced Heating is OFF."));
     }
   }
 }
