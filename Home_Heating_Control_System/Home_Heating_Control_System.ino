@@ -5,17 +5,40 @@
  email: adam.ochotnicki@mail.itsligo.ie
 
  Description:
-    The program is switched on and off by pressing the button.
-    The green LED indicates when the program is working.
+    The heating is switched on and off by pressing the button.
+    WARNING!
+    The heating must be turned off by the user.
+    Also disables temperature control heating: clock control, boost or constant if they are on.
+    The button uses "forcedon" feature.
+    
+    The green LED indicates when the temperature control heating is working.
+    
     The temperature sensor reads the ambient temperature, which is converted to degrees Celsius.
+    
     If the ambient temperature exceeds the level specified in "threshold",
     the red LED imitating the heating switch is switched off.
     The red LED (heating switch) will be turned on again when the temperature
     drops below the level given in "threshold".
+    
     The program also includes a clock.
+    The temperature control heating can be :
+    - constant,
+    - clock controled - between start time and end time, available only when the clock has been set,
+    - boost - for a certain amount of time, for example: 30 minutes or 2 and a half hours.
+    The lowest priority is clock control, then boost, then constant.
+    Examples :
+      If the boost completes or has been turned off, the program will return to clock control if it was previously set.
+      If constant has been turned off, the program will return to clock control if it has been set before,
+      even if constant was enabled during the boost.
 
-    It is possible to communicate with and control the program / device in the LAN via WiFi.
-    Commands:
+    The program includes the "forcedon" function.
+    It can be turned on / off via a LAN browser or by using the button mentioned above.
+    It allows you to permanently turn on / off the heating without temperature control.
+    WARNING!
+    The heating must be turned off by the user.
+    Also disables temperature control heating: clock control, boost or constant if they are on.
+
+    Commands to communicate with and control the program / device in the LAN via WiFi :
     "/arduino/onoff/0"       -> shows if the program is running
     "/arduino/onoff/0/1"     -> turning ON the program
     "/arduino/onoff/0/0"     -> turning OFF the program
@@ -250,6 +273,11 @@ void showTime(BridgeClient client)
   client.print(minutes);
   client.print(F(" : "));
   client.println(seconds);
+
+  if (setTimeCounter == 0)
+  {
+    client.println(F("WARNING! The time has not been set."));
+  }
 }
 
 void showVariables(BridgeClient client)
@@ -276,12 +304,14 @@ void checkTemperature(BridgeClient client)
     // Send feedback to client
     if (programRun == 0)
     {
+      showTime(client);
       client.print(F("Program is currently OFF."));
     }
     else
     {
-    client.print(F("Current temperature is : "));
-    client.print(temperature);
+      showTime(client);
+      client.print(F("Current temperature is : "));
+      client.print(temperature);
     }
 }
 
