@@ -78,7 +78,9 @@ long runningTimeChange = 0;  // variable to observe the change in time
 int seconds = 0;             // seconds variable
 int minutes = 0;             // minutes variable
 int hours = 0;               // hours variable
-int setTimeCounter = 0;      // we can see if the time has been set
+int mniute;                  // user input to set minute
+int hour;                    // user input to set hour
+int timeSet = 0;             // we can see if the time has been set
 int forcedOn = 0;            // variable for forced on loop it is off by default
 int forcedOnChange = 0;      // variable to observe the change in "forcedOn"
 int constant = 0;            // variable for constant it is off by default
@@ -146,7 +148,7 @@ void loop()
   }
 
   // reminder to set the time
-  if (setTimeCounter == 0)
+  if (timeSet == 0)
   {
     if (minutes == SET_TIME_REMINDER)
     {
@@ -276,6 +278,11 @@ void process(BridgeClient client)
     showTime(client);
   }
 
+  // is "settime" command?
+  if (command == "settime")
+  {
+    setTime(client);
+  }
   /*// is "digital" command?
   if (command == "digital")
   {
@@ -293,6 +300,35 @@ void process(BridgeClient client)
   {
     modeCommand(client);
   }*/
+}
+
+void setTime(BridgeClient client)
+{
+  // Read hour to set
+  hour = client.parseInt();
+  
+  // If the next character is a '/' it means we have an URL
+  // with a value: "/settime/10/5" or "/settime/0/5"
+  if (client.read() == '/')
+  {
+    // Read minute to set
+    minute = client.parseInt();
+
+    // set time
+    hours = hour;
+    minutes = minute;
+
+    // registering the time setting
+    if (timeSet == 0)
+    {
+      timeSet = 1;
+    }
+  }
+  else
+  {
+    client.println(F("/settime/hours/minutes Format Expected."));
+    client.println(F("Example: /settime/15/5 to set time 15:05"));
+  }
 }
 
 void showTime(BridgeClient client)
