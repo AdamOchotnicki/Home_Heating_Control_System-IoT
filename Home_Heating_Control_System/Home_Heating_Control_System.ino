@@ -78,7 +78,7 @@ long runningTimeChange = 0;  // variable to observe the change in time
 int seconds = 0;             // seconds variable
 int minutes = 0;             // minutes variable
 int hours = 0;               // hours variable
-int mniute;                  // user input to set minute
+int minute;                  // user input to set minute
 int hour;                    // user input to set hour
 int timeSet = 0;             // we can see if the time has been set
 int forcedOn = 0;            // variable for forced on loop it is off by default
@@ -90,6 +90,7 @@ int clockControl = 0;        // variable for clock control it is off by default
 #include <Bridge.h>
 #include <BridgeServer.h>
 #include <BridgeClient.h>
+#include <HttpClient.h>
 
 // Listen to the default port 5555, the Yún webserver
 // will forward there all the HTTP requests you send
@@ -119,6 +120,22 @@ void setup()
 // the loop routine runs over and over again forever:
 void loop()
 {
+  /*// Initialize the client library
+  HttpClient httpclient;
+  // Get clients coming from server
+  BridgeClient client = server.accept();
+
+  // There is a new client?
+  if (client)
+  {
+    // Process request
+    process(client);
+    
+    // Close connection and free resources.
+    client.stop();
+  }
+  delay(50); // Poll every 50ms*/
+  
   // start counting the time
   runningTime = (millis() / 1000);
   
@@ -153,6 +170,7 @@ void loop()
     if (minutes == SET_TIME_REMINDER)
     {
       // use pushingbox to send an email with a reminder
+      //client.get(http://api.pushingbox.com/pushingbox?devid=v33A7519AD4C86B5); // Make a HTTP request:
     }
   }
 
@@ -323,9 +341,13 @@ void setTime(BridgeClient client)
     {
       timeSet = 1;
     }
+    // Send feedback to client
+    client.println(F("Time set."));
+    showTime(client);
   }
   else
   {
+    // Send feedback to client
     client.println(F("/settime/hours/minutes Format Expected."));
     client.println(F("Example: /settime/15/5 to set time 15:05"));
   }
@@ -333,6 +355,7 @@ void setTime(BridgeClient client)
 
 void showTime(BridgeClient client)
 {
+  // Send feedback to client
   client.print(F("Time "));
   client.print(hours);
   client.print(F(" : "));
@@ -340,7 +363,7 @@ void showTime(BridgeClient client)
   client.print(F(" : "));
   client.println(seconds);
 
-  if (setTimeCounter == 0)
+  if (timeSet == 0)
   {
     client.println(F("WARNING! The time has not been set."));
   }
@@ -360,8 +383,8 @@ void showVariables(BridgeClient client)
     client.println(minutes);
     client.print(F("hours : "));
     client.println(hours);
-    client.print(F("setTimeCounter : "));
-    client.println(setTimeCounter);
+    client.print(F("timeSet : "));
+    client.println(timeSet);
     
 }
 
