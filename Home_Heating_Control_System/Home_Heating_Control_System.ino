@@ -86,11 +86,12 @@ int forcedOnChange = 0;      // variable to observe the change in "forcedOn"
 short constant = 0;          // variable for constant it is off by default
 short boost = 0;             // variable for boost it is off by default
 short clockControl = 0;      // variable for clock control it is off by default
-short clockControlSet = 0;   // 
 int startHour;               // clock control start hour
 int startMinute;             // clock control start minute
+short startSet = 0;          // we can see if the start time has been set
 int endHour;                 // clock control end hour
 int endMinute;               // clock control end minute
+short endSet = 0;           // we can see if the end time has been set 
 int boostTime;               // duration of boost
 int minutesChange = 70;      // variable to observe change in minutes (for boost) - 70 is out of range of minutes to be initially different
 
@@ -353,12 +354,8 @@ void startTime(BridgeClient client)
     // set time
     startHour = hour;
     startMinute = minute;
+    
 
-    // registering the time setting
-    if (timeSet == 0)
-    {
-      timeSet = 1;
-    }
     // Send feedback to client
     client.println(F("Time set."));
     showTime(client);
