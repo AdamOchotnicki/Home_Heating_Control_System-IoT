@@ -69,7 +69,7 @@ const int B=4275;            // B value of the thermistor
 
 int threshold = 27;          // setting temperature when the LED should turn off
 int buttonState = 0;         // variable for button state it is off by default
-int temperatureControl = 0;  // variable for temperature control loop it is off by default
+short temperatureControl = 0;// variable for temperature control loop it is off by default
 int sensorValue;             // variable to store the value coming from the sensor
 float temperature;           // variable for temperature value
 float R;                     // another variable for temperature calculation
@@ -80,12 +80,19 @@ int minutes = 0;             // minutes variable
 int hours = 0;               // hours variable
 int minute;                  // user input to set minute
 int hour;                    // user input to set hour
-int timeSet = 0;             // we can see if the time has been set
+short timeSet = 0;           // we can see if the time has been set
 int forcedOn = 0;            // variable for forced on loop it is off by default
 int forcedOnChange = 0;      // variable to observe the change in "forcedOn"
-int constant = 0;            // variable for constant it is off by default
-int boost = 0;               // variable for boost it is off by default
-int clockControl = 0;        // variable for clock control it is off by default
+short constant = 0;          // variable for constant it is off by default
+short boost = 0;             // variable for boost it is off by default
+short clockControl = 0;      // variable for clock control it is off by default
+short clockControlSet = 0;   // 
+int startHour;               // clock control start hour
+int startMinute;             // clock control start minute
+int endHour;                 // clock control end hour
+int endMinute;               // clock control end minute
+int boostTime;               // duration of boost
+int minutesChange = 70;      // variable to observe change in minutes (for boost) - 70 is out of range of minutes to be initially different
 
 #include <Bridge.h>
 #include <BridgeServer.h>
@@ -95,6 +102,9 @@ int clockControl = 0;        // variable for clock control it is off by default
 // Listen to the default port 5555, the Yún webserver
 // will forward there all the HTTP requests you send
 BridgeServer server;
+
+// Initialize the client library
+//HttpClient client;
 
 void setup()
 {
@@ -119,23 +129,7 @@ void setup()
 
 // the loop routine runs over and over again forever:
 void loop()
-{
-  /*// Initialize the client library
-  HttpClient httpclient;
-  // Get clients coming from server
-  BridgeClient client = server.accept();
-
-  // There is a new client?
-  if (client)
-  {
-    // Process request
-    process(client);
-    
-    // Close connection and free resources.
-    client.stop();
-  }
-  delay(50); // Poll every 50ms*/
-  
+{ 
   // start counting the time
   runningTime = (millis() / 1000);
   
@@ -170,7 +164,7 @@ void loop()
     if (minutes == SET_TIME_REMINDER)
     {
       // use pushingbox to send an email with a reminder
-      //client.get(http://api.pushingbox.com/pushingbox?devid=v33A7519AD4C86B5); // Make a HTTP request:
+      //client.get("http://api.pushingbox.com/pushingbox?devid=v33A7519AD4C86B5"); // Make a HTTP request:
     }
   }
 
@@ -205,6 +199,34 @@ void loop()
      }
   }
 
+  // Boost switch
+  if (boostTime != 0)
+  {
+    boost = 1; // turn on boost
+   
+    if (minutesChange != minutes)
+    {
+      minutesChange = minutes;
+      boostTime--;
+    }
+  }
+  else
+  {
+    boost = 0; // turn boost off
+    minutesChange = 70;
+  }
+  
+  // This is a temperature control switch
+  if (clockControl == 1 || boost == 1 || constant == 1)
+  {
+    temperatureControl = 1;
+  }
+  else
+  {
+    temperatureControl = 0;
+  }
+
+  // temperature control
   if (temperatureControl == 1)
   {
     // turn the program LED on (HIGH is the voltage level)
@@ -266,6 +288,18 @@ void process(BridgeClient client)
   // read the command
   String command = client.readStringUntil('/');
 
+  // is "constant" command?
+  if (command == "constant")
+  {
+    Constant(client);
+  }
+
+  // is "boost" command?
+  if (command == "boost")
+  {
+    Boost(client);
+  }
+
   // is "temp" command?
   if (command == "temp")
   {
@@ -301,25 +335,146 @@ void process(BridgeClient client)
   {
     setTime(client);
   }
-  /*// is "digital" command?
-  if (command == "digital")
-  {
-    digitalCommand(client);
-  }
-
-  // is "analog" command?
-  if (command == "analog")
-  {
-    analogCommand(client);
-  }
-
-  // is "mode" command?
-  if (command == "mode")
-  {
-    modeCommand(client);
-  }*/
 }
 
+// starttime command
+void startTime(BridgeClient client)
+{
+  // Read hour to set
+  hour = client.parseInt();
+  
+  // If the next character is a '/' it means we have an URL
+  // with a value: "/starttime/10/5" or "/starttime/0/5"
+  if (client.read() == '/')
+  {
+    // Read minute to set
+    minute = client.parseInt();
+
+    // set time
+    startHour = hour;
+    startMinute = minute;
+
+    // registering the time setting
+    if (timeSet == 0)
+    {
+      timeSet = 1;
+    }
+    // Send feedback to client
+    client.println(F("Time set."));
+    showTime(client);
+  }
+  else
+  {
+    // Send feedback to client
+    client.println(F("/settime/hours/minutes Format Expected."));
+    client.println(F("Example: /settime/15/5 to set time 15:05"));
+    showTime(client);
+  }
+}
+
+// constant command
+void Constant(BridgeClient client)
+{
+  // fictitious number of pin
+  int pin;
+
+  // Read pin number
+  pin = client.parseInt();
+  
+  // If the next character is a '/' it means we have an URL
+  // with a value: "/constant/0/1" or "/constant/0/0"
+  if (client.read() == '/')
+  {
+    // reading a new value
+    constant = client.parseInt();
+
+    if (constant == 1)
+    {
+    // Send feedback to client
+    client.println(F("Turning on the constant temperature program."));
+    client.println(F("Constant is now ON."));
+    showTime(client);
+    }
+    else
+    {
+    // Send feedback to client
+    client.println(F("Turning off the constant temperature program."));
+    client.println(F("Constant is now OFF."));
+    showTime(client);
+    }
+  }
+  else
+  {
+    // checking if the program is running
+    if (constant == 1)
+    {
+    // Send feedback to client
+    client.println(F("Constant temperature is currently ON."));
+    showTime(client);
+    }
+    else
+    {
+    // Send feedback to client
+    client.println(F("Constant temperature is currently OFF."));
+    showTime(client);
+    }
+  }
+}
+
+// boost command
+void Boost(BridgeClient client)
+{
+  // Read amount of hours to boost
+  int boostHours = client.parseInt();
+  
+  // If the next character is a '/' it means we have an URL
+  // with a value: "/boost/10/5" or "/boost/0/5"
+  if (client.read() == '/')
+  {
+    // Read amount of minutes to boost
+    boostTime = client.parseInt();
+
+    if (boostHours == 0 && boostTime == 0)
+    {
+      boost = 0;
+
+      // Send feedback to client
+      client.println(F("Boost has been turned OFF."));
+      showTime(client);
+    }
+    else
+    {
+      if(boostHours !=0)
+      {
+        boostHours = (boostHours * 60);
+        boostTime += boostHours;
+      }
+       // Send feedback to client
+       client.println(F("Boost has been turned ON."));
+       client.print(F("Remaining minutes : "));
+       client.println(boostTime);
+       showTime(client);
+    }
+  }
+  else
+  {
+    if(boost == 0)
+    {
+      // Send feedback to client
+      client.println(F("Boost is currently OFF."));
+      showTime(client);
+    }
+    else
+    {
+      // Send feedback to client
+      client.print(F("Boost remaining minutes : "));
+      client.println(boostTime);
+      showTime(client);
+    }
+  }
+}
+
+// settime command
 void setTime(BridgeClient client)
 {
   // Read hour to set
@@ -350,9 +505,11 @@ void setTime(BridgeClient client)
     // Send feedback to client
     client.println(F("/settime/hours/minutes Format Expected."));
     client.println(F("Example: /settime/15/5 to set time 15:05"));
+    showTime(client);
   }
 }
 
+// showtime command
 void showTime(BridgeClient client)
 {
   // Send feedback to client
@@ -369,6 +526,7 @@ void showTime(BridgeClient client)
   }
 }
 
+// sv command
 void showVariables(BridgeClient client)
 {
     client.print(F("threshold : "));
@@ -385,25 +543,36 @@ void showVariables(BridgeClient client)
     client.println(hours);
     client.print(F("timeSet : "));
     client.println(timeSet);
-    
+    client.print(F("clockControl : "));
+    client.println(clockControl);
+    client.print(F("boost : "));
+    client.println(boost);
+    client.print(F("boostTime : "));
+    client.println(boostTime);
+    client.print(F("constant : "));
+    client.println(constant);
+    client.print(F("forcedOn : "));
+    client.println(forcedOn); 
 }
 
+// temp command
 void checkTemperature(BridgeClient client)
 {
     // Send feedback to client
     if (temperatureControl == 0)
     {
-      showTime(client);
       client.print(F("Temperature control is currently OFF."));
+      showTime(client);
     }
     else
-    {
-      showTime(client);
+    { 
       client.print(F("Current temperature is : "));
       client.print(temperature);
+      showTime(client);
     }
 }
 
+// forcedon command
 void forcedOnOff(BridgeClient client)
 {
   // fictitious number of pin
@@ -426,12 +595,14 @@ void forcedOnOff(BridgeClient client)
     client.println(F("Turning on the Forced Heating program."));
     client.println(F("Heating is now ON."));
     client.println(F("DO NOT FORGET TO TURN OFF THE HEATING!"));
+    showTime(client);
     }
     else
     {
     // Send feedback to client
     client.println(F("Turning off the Forced Heating program."));
     client.println(F("Heating is now OFF."));
+    showTime(client);
     }
   }
   else
@@ -443,15 +614,18 @@ void forcedOnOff(BridgeClient client)
     client.println(F("WARNING!"));
     client.println(F("Forced Heating is ON."));
     client.println(F("DO NOT FORGET TO TURN OFF THE HEATING!"));
+    showTime(client);
     }
     else
     {
     // Send feedback to client
     client.println(F("Forced Heating is OFF."));
+    showTime(client);
     }
   }
 }
 
+// settemp command
 void setTemperature(BridgeClient client)
 {
   // fictitious number of pin
@@ -470,126 +644,14 @@ void setTemperature(BridgeClient client)
     // Send feedback to client
     client.print(F("Threshold set to : "));
     client.print(threshold);
+    showTime(client);
   }
   else
   {
     // Send feedback to client
     client.print(F("Threshold value is currently : "));
     client.print(threshold);
+    showTime(client);
   }
 }
 
-/*void digitalCommand(BridgeClient client)
-{
-  int pin, value;
-
-  // Read pin number
-  pin = client.parseInt();
-
-  // If the next character is a '/' it means we have an URL
-  // with a value like: "/digital/13/1"
-  if (client.read() == '/')
-  {
-    value = client.parseInt();
-    digitalWrite(pin, value);
-  }
-  else
-  {
-    value = digitalRead(pin);
-  }
-
-  // Send feedback to client
-  client.print(F("Pin D"));
-  client.print(pin);
-  client.print(F(" set to "));
-  client.println(value);
-
-  // Update datastore key with the current pin value
-  String key = "D";
-  key += pin;
-  Bridge.put(key, String(value));
-}
-
-void analogCommand(BridgeClient client)
-{
-  int pin, value;
-
-  // Read pin number
-  pin = client.parseInt();
-
-  // If the next character is a '/' it means we have an URL
-  // with a value like: "/analog/5/120"
-  if (client.read() == '/')
-  {
-    // Read value and execute command
-    value = client.parseInt();
-    analogWrite(pin, value);
-
-    // Send feedback to client
-    client.print(F("Pin D"));
-    client.print(pin);
-    client.print(F(" set to analog "));
-    client.println(value);
-
-    // Update datastore key with the current pin value
-    String key = "D";
-    key += pin;
-    Bridge.put(key, String(value));
-  }
-  else
-  {
-    // Read analog pin
-    value = analogRead(pin);
-
-    // Send feedback to client
-    client.print(F("Pin A"));
-    client.print(pin);
-    client.print(F(" reads analog "));
-    client.println(value);
-
-    // Update datastore key with the current pin value
-    String key = "A";
-    key += pin;
-    Bridge.put(key, String(value));
-  }
-}
-
-void modeCommand(BridgeClient client)
-{
-  int pin;
-
-  // Read pin number
-  pin = client.parseInt();
-
-  // If the next character is not a '/' we have a malformed URL
-  if (client.read() != '/')
-  {
-    client.println(F("error"));
-    return;
-  }
-
-  String mode = client.readStringUntil('\r');
-
-  if (mode == "input")
-  {
-    pinMode(pin, INPUT);
-    // Send feedback to client
-    client.print(F("Pin D"));
-    client.print(pin);
-    client.print(F(" configured as INPUT!"));
-    return;
-  }
-
-  if (mode == "output")
-  {
-    pinMode(pin, OUTPUT);
-    // Send feedback to client
-    client.print(F("Pin D"));
-    client.print(pin);
-    client.print(F(" configured as OUTPUT!"));
-    return;
-  }
-
-  client.print(F("error: invalid mode "));
-  client.print(mode);
-}*/
