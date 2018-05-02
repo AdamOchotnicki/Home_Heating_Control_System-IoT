@@ -49,14 +49,8 @@
     "/arduino/settemp/0/25"  -> assigns a value of 25 to the variable "threshold"
 
     "/arduino/showtime/0"    -> shows the current time on the device
+
     
-    "Examples of other possible commands:" - THESE COMMANDS ARE NOT ACTIVE, THE PROJECT DOES NOT PROVIDE THEIR USE!
-    "/arduino/digital/13"     -> digitalRead(13)
-    "/arduino/digital/13/1"   -> digitalWrite(13, HIGH)
-    "/arduino/analog/2/123"   -> analogWrite(2, 123)
-    "/arduino/analog/2"       -> analogRead(2)
-    "/arduino/mode/13/input"  -> pinMode(13, INPUT)
-    "/arduino/mode/13/output" -> pinMode(13, OUTPUT)
 */
 
 const int SENSOR_PIN = A2;          // grove - temperature sensor connect to A2
@@ -91,7 +85,6 @@ int startMinute;             // clock control start minute
 short startSet = 0;          // we can see if the start time has been set
 int endHour;                 // clock control end hour
 int endMinute;               // clock control end minute
-short endSet = 0;           // we can see if the end time has been set 
 int boostTime;               // duration of boost
 int minutesChange = 70;      // variable to observe change in minutes (for boost) - 70 is out of range of minutes to be initially different
 
@@ -200,7 +193,29 @@ void loop()
      }
   }
 
-  // Boost switch
+  // clock control switch
+  if(timeSet != 0)
+  {
+    // turn on heating at a specified time
+    if(startHour == hours)
+    {
+      if(startMinute == minutes)
+      {
+        clockControl = 1;
+      }
+    }
+
+    // turn off heating at a specified time
+    if(endHour == hours)
+    {
+      if(endMinute == minutes)
+      {
+        clockControl = 0;
+      }
+    }
+  }
+
+  // boost switch
   if (boostTime != 0)
   {
     boost = 1; // turn on boost
@@ -289,6 +304,18 @@ void process(BridgeClient client)
   // read the command
   String command = client.readStringUntil('/');
 
+  // is "endtime" command?
+  if (command == "endtime")
+  {
+    endTime(client);
+  }
+
+  // is "starttime" command?
+  if (command == "starttime")
+  {
+    startTime(client);
+  }
+
   // is "constant" command?
   if (command == "constant")
   {
@@ -338,6 +365,69 @@ void process(BridgeClient client)
   }
 }
 
+// endtime command
+void endTime(BridgeClient client)
+{
+  // Read hour to set
+  hour = client.parseInt();
+  
+  // If the next character is a '/' it means we have an URL
+  // with a value: "/starttime/10/5" or "/starttime/0/5"
+  if (client.read() == '/')
+  {
+    // Read minute to set
+    minute = client.parseInt();
+
+    if(timeSet == 0)
+    {
+      // Send feedback to client
+      client.println(F("The time has not yet been set."));
+      client.println(F("Please set the time first."));
+    }
+    else if(startSet == 0)
+    {
+      // Send feedback to client
+      client.println(F("The start time has not yet been set."));
+      client.println(F("Please set the start time first."));
+    }
+    else
+    {
+      // set time
+      endHour = hour;
+      endMinute = minute;
+      startSet = 0;
+  
+      // Send feedback to client
+      client.print(F("End time set to : "));
+      client.print(endHour);
+      client.print(F(":"));
+      client.println(endMinute);
+    }
+  }
+  else
+  {
+    if(timeSet == 0)
+    {
+      // Send feedback to client
+      client.println(F("The time has not yet been set."));
+      client.println(F("Please set the time first."));
+    }
+    else if(startSet == 0)
+    {
+      // Send feedback to client
+      client.println(F("The start time has not yet been set."));
+      client.println(F("Please set the start time first."));
+    }
+    else
+    {
+      // Send feedback to client
+      client.println(F("/endtime/hours/minutes Format Expected."));
+      client.println(F("Example: /endtime/15/5 to set time 15:05"));
+      showTime(client);
+    }
+  }
+}
+
 // starttime command
 void startTime(BridgeClient client)
 {
@@ -351,21 +441,41 @@ void startTime(BridgeClient client)
     // Read minute to set
     minute = client.parseInt();
 
-    // set time
-    startHour = hour;
-    startMinute = minute;
-    
-
-    // Send feedback to client
-    client.println(F("Time set."));
-    showTime(client);
+    if(timeSet == 0)
+    {
+      // Send feedback to client
+      client.println(F("The time has not yet been set."));
+      client.println(F("Please set the time first."));
+    }
+    else
+    {
+      // set time
+      startHour = hour;
+      startMinute = minute;
+      startSet = 1;
+  
+      // Send feedback to client
+      client.print(F("Start time set to : "));
+      client.print(startHour);
+      client.print(F(":"));
+      client.println(startMinute);
+    }
   }
   else
   {
-    // Send feedback to client
-    client.println(F("/settime/hours/minutes Format Expected."));
-    client.println(F("Example: /settime/15/5 to set time 15:05"));
-    showTime(client);
+    if(timeSet == 0)
+    {
+      // Send feedback to client
+      client.println(F("The time has not yet been set."));
+      client.println(F("Please set the time first."));
+    }
+    else
+    {
+      // Send feedback to client
+      client.println(F("/starttime/hours/minutes Format Expected."));
+      client.println(F("Example: /starttime/15/5 to set time 15:05"));
+      showTime(client);
+    }
   }
 }
 
@@ -387,17 +497,20 @@ void Constant(BridgeClient client)
 
     if (constant == 1)
     {
-    // Send feedback to client
-    client.println(F("Turning on the constant temperature program."));
-    client.println(F("Constant is now ON."));
-    showTime(client);
+      // turn off boost
+      boostTime = 0;
+      
+      // Send feedback to client
+      client.println(F("Turning on the constant temperature program."));
+      client.println(F("Constant is now ON."));
+      showTime(client);
     }
     else
     {
-    // Send feedback to client
-    client.println(F("Turning off the constant temperature program."));
-    client.println(F("Constant is now OFF."));
-    showTime(client);
+      // Send feedback to client
+      client.println(F("Turning off the constant temperature program."));
+      client.println(F("Constant is now OFF."));
+      showTime(client);
     }
   }
   else
