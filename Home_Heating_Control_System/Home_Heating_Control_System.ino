@@ -501,14 +501,14 @@ void Constant(BridgeClient client)
       boostTime = 0;
       
       // Send feedback to client
-      client.println(F("Turning on the constant temperature program."));
+      client.println(F("Turning on the constant temperature control program."));
       client.println(F("Constant is now ON."));
       showTime(client);
     }
     else
     {
       // Send feedback to client
-      client.println(F("Turning off the constant temperature program."));
+      client.println(F("Turning off the constant temperature control program."));
       client.println(F("Constant is now OFF."));
       showTime(client);
     }
@@ -519,13 +519,13 @@ void Constant(BridgeClient client)
     if (constant == 1)
     {
     // Send feedback to client
-    client.println(F("Constant temperature is currently ON."));
+    client.println(F("Constant temperature control is currently ON."));
     showTime(client);
     }
     else
     {
     // Send feedback to client
-    client.println(F("Constant temperature is currently OFF."));
+    client.println(F("Constant temperature control is currently OFF."));
     showTime(client);
     }
   }
@@ -671,13 +671,13 @@ void checkTemperature(BridgeClient client)
     // Send feedback to client
     if (temperatureControl == 0)
     {
-      client.print(F("Temperature control is currently OFF."));
+      client.println(F("Temperature control is currently OFF."));
       showTime(client);
     }
     else
     { 
       client.print(F("Current temperature is : "));
-      client.print(temperature);
+      client.println(temperature);
       showTime(client);
     }
 }
@@ -753,14 +753,14 @@ void setTemperature(BridgeClient client)
 
     // Send feedback to client
     client.print(F("Threshold set to : "));
-    client.print(threshold);
+    client.println(threshold);
     showTime(client);
   }
   else
   {
     // Send feedback to client
     client.print(F("Threshold value is currently : "));
-    client.print(threshold);
+    client.println(threshold);
     showTime(client);
   }
 }
