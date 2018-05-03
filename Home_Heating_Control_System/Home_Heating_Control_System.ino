@@ -57,7 +57,7 @@ const int SENSOR_PIN = A2;          // grove - temperature sensor connect to A2
 const int BUTTON_PIN = 2;           // button connected to D2
 const int PROGRAM_ON_LED_PIN = 3;   // program ON LED (green) connected to D3
 const int HEATING_LED_PIN = 4;      // heating LED (red) connected to D4
-const int SET_TIME_REMINDER = 3;    // after 3 minutes from boot a reminder should be sent to set the time
+const int SET_TIME_REMINDER = 2;    // after 3 minutes from boot a reminder should be sent to set the time
 
 const int B=4275;            // B value of the thermistor
 
@@ -87,6 +87,7 @@ int endHour;                 // clock control end hour
 int endMinute;               // clock control end minute
 int boostTime;               // duration of boost
 int minutesChange = 70;      // variable to observe change in minutes (for boost) - 70 is out of range of minutes to be initially different
+short reminder = 0;          // variable to indicate that the reminder has been sent
 
 #include <Bridge.h>
 #include <BridgeServer.h>
@@ -97,9 +98,7 @@ int minutesChange = 70;      // variable to observe change in minutes (for boost
 // will forward there all the HTTP requests you send
 BridgeServer server;
 
-// Initialize the client library
-//HttpClient client;
-
+// setup
 void setup()
 {
   // Bridge startup
@@ -124,6 +123,9 @@ void setup()
 // the loop routine runs over and over again forever:
 void loop()
 { 
+  // Initialize the client library
+  HttpClient httpclient;
+  
   // start counting the time
   runningTime = (millis() / 1000);
   
@@ -155,10 +157,14 @@ void loop()
   // reminder to set the time
   if (timeSet == 0)
   {
-    if (minutes == SET_TIME_REMINDER)
+    if(reminder == 0)
     {
-      // use pushingbox to send an email with a reminder
-      //client.get("http://api.pushingbox.com/pushingbox?devid=v33A7519AD4C86B5"); // Make a HTTP request:
+      if (minutes == SET_TIME_REMINDER)
+      {
+        // use pushingbox to send an email with a reminder
+        httpclient.get("http://api.pushingbox.com/pushingbox?devid=v29B077CC770FF4A"); // Make a HTTP request
+        reminder = 1;
+      }
     }
   }
 
@@ -290,6 +296,9 @@ void loop()
 
       // turn the heating on
       digitalWrite(HEATING_LED_PIN, HIGH);
+
+      // use pushingbox to send an email with a reminder
+      httpclient.get("http://api.pushingbox.com/pushingbox?devid=vD652BD7960C8A9D"); // Make a HTTP request
     }
     else
     {
