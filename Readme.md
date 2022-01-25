@@ -3,7 +3,7 @@ Group E1 - Internet of Things.
 # Home Heating Control System - college project 2.
  
  Author: Adam Ochotnicki
- email: adam.ochotnicki@mail.itsligo.ie
+ email: adamochotnicki@gmail.com
 
 
 Description:
